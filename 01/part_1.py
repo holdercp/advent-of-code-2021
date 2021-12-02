@@ -1,7 +1,6 @@
 depths = []
 with open("01/input.txt") as f:
     depths = f.read().splitlines()
-
 depths = [int(d) for d in depths]
 
 increases = 0
