@@ -7,4 +7,19 @@ with open("02/input.txt") as f:
         cTuple = tuple(cTuple)
         commands.append(cTuple)
 
-print(commands)
+sub = {
+    'depth': 0,
+    'position': 0
+}
+
+for c in commands:
+    instruction = c[0]
+    value = c[1]
+    if instruction == 'forward':
+        sub['position'] += value
+    elif instruction == 'up':
+        sub['depth'] -= value
+    elif instruction == 'down':
+        sub['depth'] += value
+
+print(sub['position'] * sub['depth'])
