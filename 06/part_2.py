@@ -1,5 +1,3 @@
-import math
-
 fish = []
 with open("06/input.txt") as f:
     fish = f.read().strip().split(',')
