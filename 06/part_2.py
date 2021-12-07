@@ -6,25 +6,39 @@ with open("06/input.txt") as f:
     fish = [int(f) for f in fish]
 
 days = 256
-days_to_spawn_new = 9
-days_to_spawn = 7
-spawn = len(fish)
 
 
-def sum_spawn(fish, days):
-    days_remaining = days
-    day_offset = days_to_spawn - (fish)
-    spawn_count = max(0, math.floor(
-        (days_remaining + day_offset) / days_to_spawn))
+def generate_school(starting_fish):
+    school = {}
+    for n in range(9):
+        school[n] = 0
 
-    for i in range(spawn_count):
-        days_remaining -= fish if i == 0 else days_to_spawn
-        spawn_count += sum_spawn(days_to_spawn_new, days_remaining)
+    for f in starting_fish:
+        school[f] += 1
 
-    return spawn_count
+    return school
 
 
-for f in fish:
-    spawn += sum_spawn(f + 1, days)
+def age_fish(school):
+    new_fish = school[0]
 
-print(spawn)
+    school[0] = school[1]
+    school[1] = school[2]
+    school[2] = school[3]
+    school[3] = school[4]
+    school[4] = school[5]
+    school[5] = school[6]
+    school[6] = school[7]
+    school[7] = school[8]
+
+    school[8] = new_fish
+    school[6] += new_fish
+
+    return school
+
+
+school = generate_school(fish)
+for d in range(days):
+    school = age_fish(school.copy())
+
+print(sum(school.values()))
