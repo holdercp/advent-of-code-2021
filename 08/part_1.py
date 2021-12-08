@@ -8,7 +8,7 @@ with open("08/input.txt") as f:
 count = 0
 for o in outputs:
     length = len(o)
-    if length == 2 or length == 3 or length == 4 or length == 7:
+    if 1 < length < 5 or length == 7:
         count += 1
 
 print(count)
