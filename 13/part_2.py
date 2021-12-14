@@ -38,4 +38,5 @@ for d in dots:
     x, y = d
     image[y][x] = '#'
 
-print(image)
+for line in image:
+    print(''.join(line))
