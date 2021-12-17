@@ -55,54 +55,38 @@ def get_unvisited_neighbors(node):
         node_key = (x_prev, y)
         neighbors.add(node_key)
 
-    unvisited_neighbors = unvisited.intersection(neighbors)
+    unvisited_neighbors = neighbors.difference(visited)
 
     return unvisited_neighbors
 
 
-def calc_risk(node, nodes):
-    lowest = None
-    for n in nodes:
-        risk_level = lowest_risk_paths[node] + risk_levels[n]
-
-        if risk_level < lowest_risk_paths[n]:
-            lowest_risk_paths[n] = risk_level
-
-        if lowest != None:
-            if risk_level < lowest_risk_paths[lowest]:
-                lowest = n
-        else:
-            lowest = n
-    unvisited.remove(node)
-
-    return lowest
+def get_min_node():
+    unvisited = {node: level for node,
+                 level in risks.items() if node not in visited}
+    return min(unvisited, key=unvisited.get)
 
 
-def get_next_node(paths, unvisited):
-    tentative_paths = [(p, l) for p, l in paths.items()
-                       if l < float('inf') and p in unvisited]
-    next = min(tentative_paths, key=lambda n: n[1])
-    return next[0]
-
-
-unvisited = set()
-lowest_risk_paths = {}
-for node in risk_levels.keys():
-    unvisited.add(node)
-    lowest_risk_paths[node] = float('inf')
-
+visited = set()
+risks = {}
 initial = (0, 0)
 destination = (499, 499)
-lowest_risk_paths[initial] = 0
-current = initial
-while len(unvisited) > 0:
-    unvisited_neighbors = get_unvisited_neighbors(current)
-    calc_risk(current, unvisited_neighbors)
-    next_node = get_next_node(lowest_risk_paths, unvisited)
 
-    if next_node == destination:
+risks[initial] = 0
+while len(visited) < len(risk_levels):
+    current = get_min_node()
+    visited.add(current)
+
+    if current == destination:
         break
 
-    current = next_node
+    neighbors = get_unvisited_neighbors(current)
+    for neighbor in neighbors:
+        level = risks[current] + risk_levels[neighbor]
+        if neighbor in risks:
+            if level < risks[neighbor]:
+                risks[neighbor] = level
+        else:
+            risks[neighbor] = level
 
-print(lowest_risk_paths[destination])
+
+print(risks[destination])
