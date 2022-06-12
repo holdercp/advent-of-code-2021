@@ -39,22 +39,28 @@ with open('22/input.txt') as f:
 
 
 def get_intersection(c1: Cuboid, c2: Cuboid) -> Union[coordinates, None]:
-    # TODO: Complete implementation
-    # If intersects, return coordinates of intersection
-    # Else return None
-    return None
+    if ((c1.x[0] > c2.x[1] or c1.x[1] < c2.x[0]) or (c1.y[0] > c2.y[1] or c1.y[1] < c2.y[0]) or (c1.z[0] > c2.z[1] or c1.z[1] < c2.z[0])):
+        return None
+    else:
+        # TODO: Calculate intersection coordinates
+        return {'x': (0, 0), 'y': (0, 0), 'z': (0, 0)}
 
 
 kept_cuboids = []
 for c in cuboids:
+    cuboids_to_keep = []
+
     if c.type == 1:
-        kept_cuboids.append(c)
+        cuboids_to_keep.append(c)
 
     for kc in kept_cuboids:
         intersection = get_intersection(c, kc)
         if (intersection):
             cuboid = Cuboid(coordinates=intersection, type=kc.type * -1)
-            kept_cuboids.append(cuboid)
+            cuboids_to_keep.append(cuboid)
+
+    kept_cuboids += cuboids_to_keep
+
 
 on_volume = 0
 for c in kept_cuboids:
