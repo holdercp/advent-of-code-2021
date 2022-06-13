@@ -14,7 +14,7 @@ class Cuboid:
         self.type = type
 
     def get_volume(self) -> int:
-        return (abs(self.x[0] - self.x[1]) * abs(self.y[0] - self.y[1]) * abs(self.z[0] - self.z[1])) * self.type
+        return ((abs(self.x[0] - self.x[1]) + 1) * (abs(self.y[0] - self.y[1]) + 1) * (abs(self.z[0] - self.z[1]) + 1)) * self.type
 
 
 cuboids = []
@@ -41,9 +41,11 @@ with open('22/input.txt') as f:
 def get_intersection(c1: Cuboid, c2: Cuboid) -> Union[coordinates, None]:
     if ((c1.x[0] > c2.x[1] or c1.x[1] < c2.x[0]) or (c1.y[0] > c2.y[1] or c1.y[1] < c2.y[0]) or (c1.z[0] > c2.z[1] or c1.z[1] < c2.z[0])):
         return None
-    else:
-        # TODO: Calculate intersection coordinates
-        return {'x': (0, 0), 'y': (0, 0), 'z': (0, 0)}
+
+    x = (max(c1.x[0], c2.x[0]), min(c1.x[1], c2.x[1]))
+    y = (max(c1.y[0], c2.y[0]), min(c1.y[1], c2.y[1]))
+    z = (max(c1.z[0], c2.z[0]), min(c1.z[1], c2.z[1]))
+    return {'x': x, 'y': y, 'z': z}
 
 
 kept_cuboids = []
