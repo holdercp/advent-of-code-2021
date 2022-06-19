@@ -23,6 +23,12 @@ def serializeUniverse(universe: universe, roll: int) -> str:
 
 winning_score = 21
 rolls = [sum(p) for p in product([1, 2, 3], repeat=3)]
+rollsDict = {}
+for r in rolls:
+    if r in rollsDict:
+        rollsDict[r] += 1
+    else:
+        rollsDict[r] = 1
 wins = {
     'p1': 0,
     'p2': 0
@@ -49,15 +55,15 @@ seenUniverses = set()
 
 while len(universes) > 0:
     universe = universes.pop()
-    for r in rolls:
+    for roll, occurences in rollsDict.items():
         cp = universe['current_player']
-        moves = ((cp['pos'] + r) % 10) or 10
-        universeState = serializeUniverse(universe=universe, roll=r)
+        moves = ((cp['pos'] + roll) % 10) or 10
+        universeState = serializeUniverse(universe=universe, roll=roll)
 
         if universeState in seenUniverses:
-            wins[cp['id']] += 1
+            wins[cp['id']] += occurences
         elif cp['score'] + moves >= winning_score:
-            wins[cp['id']] += 1
+            wins[cp['id']] += occurences
             seenUniverses.add(universeState)
         else:
             next_u = copy.deepcopy(universe)
