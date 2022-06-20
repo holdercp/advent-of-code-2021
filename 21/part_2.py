@@ -1,7 +1,8 @@
-from collections import deque
+
+import json
 import copy
 from itertools import product
-from typing import Literal, TypedDict
+from typing import Dict, Literal, Tuple, TypedDict
 
 player_pos = []
 with open('21/input.txt') as f:
@@ -10,65 +11,79 @@ with open('21/input.txt') as f:
         *_, pos = p.split(': ')
         player_pos.append(int(pos))
 
-player = TypedDict(
-    'Player', {'id': Literal['p1', 'p2'], 'score': int, 'pos': int})
-universe = TypedDict(
-    'Universe', {'p1': player, 'p2': player, 'current_player': player})
+Player = TypedDict(
+    'Player', {'score': int, 'pos': int})
+PlayerId = Literal['p1', 'p2']
+Universe = TypedDict(
+    'Universe', {'p1': Player, 'p2': Player})
+Universes = Dict[str, int]
 
 
-def serializeUniverse(universe: universe, roll: int) -> str:
-    p1, p2, current_player = universe.values()
-    return f'{p1["id"]}:({p1["score"]},{p1["pos"]}),{p2["id"]}:({p2["score"]},{p2["pos"]}),cp:{current_player["id"]},m:{roll}'
+def switch_players(current_player: PlayerId) -> PlayerId:
+    return 'p1' if current_player == 'p2' else 'p2'
 
 
-winning_score = 21
+def move(universe: Universe, roll: int, current_player: PlayerId) -> Universe:
+    next_universe = copy.deepcopy(universe)
+    moves = ((universe[current_player]['pos'] + roll) % 10) or 10
+
+    next_universe[current_player]['score'] += moves
+    next_universe[current_player]['pos'] = moves
+    return next_universe
+
+
+def take_turn(universes: Dict, current_player: PlayerId) -> Tuple[Universes, int]:
+    wins = 0
+    new_universes = {}
+
+    for universe_serialized, universe_occurences in universes.items():
+        universe = json.loads(universe_serialized)
+        for roll, roll_freqs in roll_freq_map.items():
+            next_universe = move(universe, roll, current_player)
+            universe_count = universe_occurences * roll_freqs
+
+            if next_universe[current_player]['score'] >= winning_score:
+                wins += universe_count
+            else:
+                next_universe_serialized = json.dumps(next_universe)
+                if next_universe_serialized in new_universes:
+                    new_universes[next_universe_serialized] += universe_count
+                else:
+                    new_universes[next_universe_serialized] = universe_count
+
+    return (new_universes, wins)
+
+
 rolls = [sum(p) for p in product([1, 2, 3], repeat=3)]
-rollsDict = {}
+roll_freq_map = {}
 for r in rolls:
-    if r in rollsDict:
-        rollsDict[r] += 1
+    if r in roll_freq_map:
+        roll_freq_map[r] += 1
     else:
-        rollsDict[r] = 1
-wins = {
+        roll_freq_map[r] = 1
+winning_score = 21
+total_wins = {
     'p1': 0,
     'p2': 0
 }
-p1 = {
-    'id': 'p1',
-    'score': 0,
-    'pos': player_pos[0]
+starting_universe = {
+    'p1': {
+        'score': 0,
+        'pos': player_pos[0]
+    },
+    'p2': {
+        'score': 0,
+        'pos': player_pos[1]
+    },
 }
-p2 = {
-    'id': 'p2',
-    'score': 0,
-    'pos': player_pos[1]
-}
-starting_state = {
-    'p1': p1,
-    'p2': p2,
-    'current_player': p1,
-}
-universes = deque()
-universes.append(starting_state)
+universes = {}
+universes[json.dumps(starting_universe)] = 1
 
-seenUniverses = set()
+current_player = 'p1'
+while len(universes):
+    universes, wins = take_turn(universes, current_player)
+    total_wins[current_player] += wins
+    current_player = switch_players(current_player)
 
-while len(universes) > 0:
-    universe = universes.pop()
-    for roll, occurences in rollsDict.items():
-        cp = universe['current_player']
-        moves = ((cp['pos'] + roll) % 10) or 10
-        universeState = serializeUniverse(universe=universe, roll=roll)
 
-        if universeState in seenUniverses:
-            wins[cp['id']] += occurences
-        elif cp['score'] + moves >= winning_score:
-            wins[cp['id']] += occurences
-            seenUniverses.add(universeState)
-        else:
-            next_u = copy.deepcopy(universe)
-            next_u[cp['id']]['score'] += moves
-            next_u[cp['id']]['pos'] = moves
-            next_u['current_player'] = next_u['p1'] if next_u['current_player'] == next_u['p2'] else next_u['p2']
-            universes.append(next_u)
-print(wins)
+print(max(total_wins['p1'], total_wins['p2']))
