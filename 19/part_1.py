@@ -4,9 +4,11 @@ with open('19/input.txt') as f:
     scanner_data_raw = [d.splitlines() for d in scanner_data_raw]
     for sdr in scanner_data_raw:
         coordinates = sdr[1:]
+        beacons = []
         for coords in coordinates:
-            scanner_data.append(tuple([int(coor)
-                                for coor in coords.split(",")]))
+            beacons.append(tuple([int(coor)
+                                  for coor in coords.split(",")]))
+        scanner_data.append(beacons)
 
 
 print(scanner_data)
