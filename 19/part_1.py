@@ -1,4 +1,3 @@
-import re
 from typing import List, Tuple, TypedDict
 import queue
 
@@ -21,38 +20,42 @@ Scanner = TypedDict(
 ScannerList = List[Scanner]
 
 OVERLAP_THRESHOLD = 12
-OVERLAP_SUCCESS = 'overlap'
-OVERLAP_FAILURE = 'no overlap'
 
 rotate_functions = [
-    lambda coor: coor,
-    lambda coor: (-coor[1], coor[0], coor[2]),
-    lambda coor: (-coor[0], -coor[1], coor[2]),
-    lambda coor: (coor[1], -coor[0], coor[2]),
-    lambda coor: (coor[2], coor[1], -coor[0]),
-    lambda coor: (coor[2], coor[0], coor[1]),
-    lambda coor: (coor[2], -coor[1], coor[0]),
-    lambda coor: (coor[2], -coor[0], -coor[1]),
-    lambda coor: (-coor[0], coor[1], -coor[2]),
-    lambda coor: (-coor[1], coor[0], -coor[2]),
-    lambda coor: (-coor[0], -coor[1], -coor[2]),
-    lambda coor: (coor[1], -coor[0], -coor[2]),
-    lambda coor: (-coor[2], coor[1], coor[0]),
-    lambda coor: (-coor[2], coor[0], -coor[1]),
-    lambda coor: (-coor[2], -coor[1], -coor[0]),
-    lambda coor: (-coor[2], -coor[0], coor[1]),
-    lambda coor: (coor[0], coor[2], -coor[1]),
-    lambda coor: (-coor[1], coor[2], -coor[0]),
-    lambda coor: (-coor[0], coor[2], coor[1]),
-    lambda coor: (coor[1], coor[2], coor[0]),
-    lambda coor: (coor[0], -coor[2], coor[1]),
-    lambda coor: (coor[1], -coor[2], -coor[0]),
-    lambda coor: (-coor[0], -coor[2], -coor[1]),
-    lambda coor: (-coor[1], -coor[2], coor[0]),
+    # positive x
+    lambda coord: (+coord[0], +coord[1], +coord[2]),
+    lambda coord: (+coord[0], -coord[2], +coord[1]),
+    lambda coord: (+coord[0], -coord[1], -coord[2]),
+    lambda coord: (+coord[0], +coord[2], -coord[1]),
+    # negative x
+    lambda coord: (-coord[0], -coord[1], +coord[2]),
+    lambda coord: (-coord[0], +coord[2], +coord[1]),
+    lambda coord: (-coord[0], +coord[1], -coord[2]),
+    lambda coord: (-coord[0], -coord[2], -coord[1]),
+    # positive y
+    lambda coord: (+coord[1], +coord[2], +coord[0]),
+    lambda coord: (+coord[1], -coord[0], +coord[2]),
+    lambda coord: (+coord[1], -coord[2], -coord[0]),
+    lambda coord: (+coord[1], +coord[0], -coord[2]),
+    # negative y
+    lambda coord: (-coord[1], -coord[2], +coord[0]),
+    lambda coord: (-coord[1], +coord[0], +coord[2]),
+    lambda coord: (-coord[1], +coord[2], -coord[0]),
+    lambda coord: (-coord[1], -coord[0], -coord[2]),
+    # positive z
+    lambda coord: (+coord[2], +coord[0], +coord[1]),
+    lambda coord: (+coord[2], -coord[1], +coord[0]),
+    lambda coord: (+coord[2], -coord[0], -coord[1]),
+    lambda coord: (+coord[2], +coord[1], -coord[0]),
+    # negative z
+    lambda coord: (-coord[2], -coord[0], +coord[1]),
+    lambda coord: (-coord[2], +coord[1], +coord[0]),
+    lambda coord: (-coord[2], +coord[0], -coord[1]),
+    lambda coord: (-coord[2], -coord[1], -coord[0]),
 ]
 
 
-def setup() -> ScannerList:
+def setup_scanners() -> ScannerList:
     scanners = []
     for i, sd in enumerate(scanner_data):
         scanner = {'id': str(i), 'beacons': [b for b in sd], 'rotations': []}
@@ -76,7 +79,7 @@ def check_overlap(beacons_1: BeaconList, beacons_2: BeaconList, offset: Beacon) 
     return (len(overlapping_beacons) >= OVERLAP_THRESHOLD, offset_beacons)
 
 
-def compare_beacons(beacons: BeaconList, rotations: List[BeaconList]) -> Tuple[str, BeaconList]:
+def compare_beacons(beacons: BeaconList, rotations: List[BeaconList]) -> BeaconList:
     for beacon in beacons:
         for rotation in rotations:
             for rotated_beacon in rotation:
@@ -85,44 +88,45 @@ def compare_beacons(beacons: BeaconList, rotations: List[BeaconList]) -> Tuple[s
                     beacons, rotation, offset)
 
                 if does_overlap:
-                    return (OVERLAP_SUCCESS, offset_beacons)
-    return (OVERLAP_FAILURE, [])
+                    return offset_beacons
+    return []
 
 
-def search_overlap(resolved_scanner: Scanner, scanners: ScannerList) -> List[Tuple[int, Scanner]]:
+def search_overlap(done_scanner: Scanner, unknown_scanners: ScannerList) -> ScannerList:
     overlapping_scanners = []
-    for i, scanner in enumerate(scanners):
-        if scanner == resolved_scanner:
+    for u_scanner in unknown_scanners:
+        if u_scanner == done_scanner:
             continue
-        result, offset_beacons = compare_beacons(
-            resolved_scanner['beacons'], scanner['rotations'])
-        if result == OVERLAP_SUCCESS:
+        offset_beacons = compare_beacons(
+            done_scanner['beacons'], u_scanner['rotations'])
+        if len(offset_beacons) > 0:
             print(
-                f'      Found overlap with scanner {scanner["id"]}')
-            scanner['beacons'] = offset_beacons
-            overlapping_scanners.append((i, scanner))
+                f'      Found overlap with scanner {u_scanner["id"]}')
+            u_scanner['beacons'] = offset_beacons
+            overlapping_scanners.append(u_scanner)
 
     return overlapping_scanners
 
 
-scanners = setup()
+scanners = setup_scanners()
 beacons = set(scanners[0]['beacons'])
-resolved_scanners: ScannerList = queue.Queue()
-resolved_scanners.put(scanners[0])
-visited_scanners = []
+done_scanners: ScannerList = queue.Queue()
+done_scanners.put(scanners[0])
+seen_scanners = []
 
-while not resolved_scanners.empty():
-    resolved_scanner = resolved_scanners.get()
-    visited_scanners.append(resolved_scanner['id'])
+while not done_scanners.empty():
+    resolved_scanner: Scanner = done_scanners.get()
+    seen_scanners.append(resolved_scanner['id'])
     print(f'Searching for overlaps with scanner {resolved_scanner["id"]}...')
     overlapping_scanners = search_overlap(resolved_scanner, scanners)
 
     if len(overlapping_scanners) == 0:
         print(f'WARN: No overlaps found for scanner {resolved_scanner["id"]}!')
     else:
-        for pos, os in overlapping_scanners:
-            beacons |= set(os['beacons'])
-            if os['id'] not in visited_scanners:
-                resolved_scanners.put(os)
+        for o_scanner in overlapping_scanners:
+            beacons |= set(o_scanner['beacons'])
+            if o_scanner['id'] not in seen_scanners:
+                done_scanners.put(o_scanner)
+                seen_scanners.append(o_scanner['id'])
 
 print(len(beacons))
