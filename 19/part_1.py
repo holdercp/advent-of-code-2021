@@ -1,3 +1,4 @@
+import re
 from typing import List, Tuple, TypedDict
 import queue
 
@@ -72,7 +73,7 @@ def check_overlap(beacons_1: BeaconList, beacons_2: BeaconList, offset: Beacon) 
     overlapping_beacons: List[Beacon] = set(
         beacons_1).intersection(offset_beacons)
 
-    return (len(overlapping_beacons) == OVERLAP_THRESHOLD, offset_beacons)
+    return (len(overlapping_beacons) >= OVERLAP_THRESHOLD, offset_beacons)
 
 
 def compare_beacons(beacons: BeaconList, rotations: List[BeaconList]) -> Tuple[str, BeaconList]:
@@ -91,11 +92,13 @@ def compare_beacons(beacons: BeaconList, rotations: List[BeaconList]) -> Tuple[s
 def search_overlap(resolved_scanner: Scanner, scanners: ScannerList) -> List[Tuple[int, Scanner]]:
     overlapping_scanners = []
     for i, scanner in enumerate(scanners):
+        if scanner == resolved_scanner:
+            continue
         result, offset_beacons = compare_beacons(
             resolved_scanner['beacons'], scanner['rotations'])
         if result == OVERLAP_SUCCESS:
             print(
-                f'Found overlap. Scanner {resolved_scanner["id"]} overlaps with scanner {scanner["id"]}')
+                f'      Found overlap with scanner {scanner["id"]}')
             scanner['beacons'] = offset_beacons
             overlapping_scanners.append((i, scanner))
 
@@ -104,15 +107,22 @@ def search_overlap(resolved_scanner: Scanner, scanners: ScannerList) -> List[Tup
 
 scanners = setup()
 beacons = set(scanners[0]['beacons'])
-resolved_scanners = queue.Queue()
-resolved_scanners.put(scanners.pop(0))
+resolved_scanners: ScannerList = queue.Queue()
+resolved_scanners.put(scanners[0])
+visited_scanners = []
 
-while not resolved_scanners.empty() > 0:
+while not resolved_scanners.empty():
     resolved_scanner = resolved_scanners.get()
+    visited_scanners.append(resolved_scanner['id'])
+    print(f'Searching for overlaps with scanner {resolved_scanner["id"]}...')
     overlapping_scanners = search_overlap(resolved_scanner, scanners)
 
-    for pos, os in overlapping_scanners:
-        beacons |= set(os['beacons'])
-        resolved_scanners.put(scanners.pop(scanners.index(os)))
+    if len(overlapping_scanners) == 0:
+        print(f'WARN: No overlaps found for scanner {resolved_scanner["id"]}!')
+    else:
+        for pos, os in overlapping_scanners:
+            beacons |= set(os['beacons'])
+            if os['id'] not in visited_scanners:
+                resolved_scanners.put(os)
 
 print(len(beacons))
