@@ -1,7 +1,8 @@
 from typing import List, Tuple, TypedDict
+import queue
 
 scanner_data = []
-with open('19/input_2d.txt') as f:
+with open('19/input.txt') as f:
     scanner_data_raw = f.read().strip().split('\n\n')
     scanner_data_raw = [d.splitlines() for d in scanner_data_raw]
     for sdr in scanner_data_raw:
@@ -12,30 +13,48 @@ with open('19/input_2d.txt') as f:
                                   for coor in coords.split(",")]))
         scanner_data.append(beacons)
 
-Beacon = Tuple[int, int]
+Beacon = Tuple[int, int, int]
 BeaconList = List[Beacon]
 Scanner = TypedDict(
-    'Scanner', {'beacons': BeaconList, 'rotations': List[BeaconList]})
+    'Scanner', {'id': str, 'beacons': BeaconList, 'rotations': List[BeaconList]})
 ScannerList = List[Scanner]
 
-OVERLAP_THRESHOLD = 3
+OVERLAP_THRESHOLD = 12
+OVERLAP_SUCCESS = 'overlap'
+OVERLAP_FAILURE = 'no overlap'
 
 rotate_functions = [
     lambda coor: coor,
-    lambda coor: (-coor[1], -coor[0]),
-    lambda coor: (-coor[0], -coor[1]),
-    lambda coor: (-coor[1], coor[0]),
-    lambda coor: (-coor[0], coor[1]),
-    lambda coor: (coor[1], coor[0]),
-    lambda coor: (coor[0], -coor[1]),
-    lambda coor: (-coor[1], -coor[0]),
+    lambda coor: (-coor[1], coor[0], coor[2]),
+    lambda coor: (-coor[0], -coor[1], coor[2]),
+    lambda coor: (coor[1], -coor[0], coor[2]),
+    lambda coor: (coor[2], coor[1], -coor[0]),
+    lambda coor: (coor[2], coor[0], coor[1]),
+    lambda coor: (coor[2], -coor[1], coor[0]),
+    lambda coor: (coor[2], -coor[0], -coor[1]),
+    lambda coor: (-coor[0], coor[1], -coor[2]),
+    lambda coor: (-coor[1], coor[0], -coor[2]),
+    lambda coor: (-coor[0], -coor[1], -coor[2]),
+    lambda coor: (coor[1], -coor[0], -coor[2]),
+    lambda coor: (-coor[2], coor[1], coor[0]),
+    lambda coor: (-coor[2], coor[0], -coor[1]),
+    lambda coor: (-coor[2], -coor[1], -coor[0]),
+    lambda coor: (-coor[2], -coor[0], coor[1]),
+    lambda coor: (coor[0], coor[2], -coor[1]),
+    lambda coor: (-coor[1], coor[2], -coor[0]),
+    lambda coor: (-coor[0], coor[2], coor[1]),
+    lambda coor: (coor[1], coor[2], coor[0]),
+    lambda coor: (coor[0], -coor[2], coor[1]),
+    lambda coor: (coor[1], -coor[2], -coor[0]),
+    lambda coor: (-coor[0], -coor[2], -coor[1]),
+    lambda coor: (-coor[1], -coor[2], coor[0]),
 ]
 
 
 def setup() -> ScannerList:
     scanners = []
     for i, sd in enumerate(scanner_data):
-        scanner = {'beacons': [b for b in sd], 'rotations': []}
+        scanner = {'id': str(i), 'beacons': [b for b in sd], 'rotations': []}
         for rotate in rotate_functions:
             rotation = [rotate(b) for b in scanner['beacons']]
             scanner['rotations'].append(rotation)
@@ -44,44 +63,56 @@ def setup() -> ScannerList:
 
 
 def calc_offset(beacon_1: Beacon, beacon_2: Beacon) -> Beacon:
-    return (beacon_1[0] - beacon_2[0], beacon_1[1] - beacon_2[1])
+    return (beacon_1[0] - beacon_2[0], beacon_1[1] - beacon_2[1], beacon_1[2] - beacon_2[2])
 
 
 def check_overlap(beacons_1: BeaconList, beacons_2: BeaconList, offset: Beacon) -> Tuple[bool, BeaconList]:
     offset_beacons: BeaconList = [
-        (b[0] + offset[0], b[1] + offset[1]) for b in beacons_2]
-    overlapping_beacon_locations: List[Beacon] = set(
+        (b[0] + offset[0], b[1] + offset[1], b[2] + offset[2]) for b in beacons_2]
+    overlapping_beacons: List[Beacon] = set(
         beacons_1).intersection(offset_beacons)
 
-    return (len(overlapping_beacon_locations) >= OVERLAP_THRESHOLD, offset_beacons)
+    return (len(overlapping_beacons) == OVERLAP_THRESHOLD, offset_beacons)
 
 
-def search_overlap(origin_scanner: Scanner, scanners: ScannerList) -> Scanner:
-    for scanner in scanners:
-        for origin_beacon in origin_scanner['beacons']:
-            for rotation in scanner['rotations']:
-                for beacon in rotation:
-                    offset = calc_offset(origin_beacon, beacon)
-                    does_overlap, offset_beacons = check_overlap(
-                        origin_scanner['beacons'], rotation, offset)
+def compare_beacons(beacons: BeaconList, rotations: List[BeaconList]) -> Tuple[str, BeaconList]:
+    for beacon in beacons:
+        for rotation in rotations:
+            for rotated_beacon in rotation:
+                offset = calc_offset(beacon, rotated_beacon)
+                does_overlap, offset_beacons = check_overlap(
+                    beacons, rotation, offset)
 
-                    if does_overlap:
-                        scanner['beacons'] = offset_beacons
-                        return scanner
+                if does_overlap:
+                    return (OVERLAP_SUCCESS, offset_beacons)
+    return (OVERLAP_FAILURE, [])
 
-    raise Exception(
-        f'Overlap was not found with scanner: {origin_scanner.id}')
+
+def search_overlap(resolved_scanner: Scanner, scanners: ScannerList) -> List[Tuple[int, Scanner]]:
+    overlapping_scanners = []
+    for i, scanner in enumerate(scanners):
+        result, offset_beacons = compare_beacons(
+            resolved_scanner['beacons'], scanner['rotations'])
+        if result == OVERLAP_SUCCESS:
+            print(
+                f'Found overlap. Scanner {resolved_scanner["id"]} overlaps with scanner {scanner["id"]}')
+            scanner['beacons'] = offset_beacons
+            overlapping_scanners.append((i, scanner))
+
+    return overlapping_scanners
 
 
 scanners = setup()
-scanner = scanners.pop(0)
-beacons = set(scanner['beacons'])
+beacons = set(scanners[0]['beacons'])
+resolved_scanners = queue.Queue()
+resolved_scanners.put(scanners.pop(0))
 
-while len(scanners) > 0:
-    overlapping_scanner = search_overlap(scanner, scanners)
-    beacons |= set(overlapping_scanner['beacons'])
-    scanner = scanners.pop(scanners.index(overlapping_scanner))
+while not resolved_scanners.empty() > 0:
+    resolved_scanner = resolved_scanners.get()
+    overlapping_scanners = search_overlap(resolved_scanner, scanners)
 
+    for pos, os in overlapping_scanners:
+        beacons |= set(os['beacons'])
+        resolved_scanners.put(scanners.pop(scanners.index(os)))
 
 print(len(beacons))
-print(beacons)
