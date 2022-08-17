@@ -112,11 +112,10 @@ scanners = setup_scanners()
 beacons = set(scanners[0]['beacons'])
 located_scanners: ScannerList = queue.Queue()
 located_scanners.put(scanners[0])
-seen_scanners: str = []
+seen_scanners: str = [scanners[0]]
 
 while not located_scanners.empty():
     located_scanner: Scanner = located_scanners.get()
-    seen_scanners.append(located_scanner['id'])
 
     print(f'Searching for overlaps with scanner {located_scanner["id"]}...')
     overlapping_scanners = search_overlap(located_scanner, scanners)
@@ -128,5 +127,6 @@ while not located_scanners.empty():
             beacons |= set(o_scanner['beacons'])
             if o_scanner['id'] not in seen_scanners:
                 located_scanners.put(o_scanner)
+                seen_scanners.append(o_scanner['id'])
 
 print(len(beacons))
