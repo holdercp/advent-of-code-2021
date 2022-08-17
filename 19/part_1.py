@@ -92,13 +92,13 @@ def compare_beacons(beacons: BeaconList, rotations: List[BeaconList]) -> BeaconL
     return []
 
 
-def search_overlap(done_scanner: Scanner, unknown_scanners: ScannerList) -> ScannerList:
+def search_overlap(located_scanner: Scanner, unknown_scanners: ScannerList) -> ScannerList:
     overlapping_scanners = []
     for u_scanner in unknown_scanners:
-        if u_scanner == done_scanner:
+        if u_scanner == located_scanner:
             continue
         offset_beacons = compare_beacons(
-            done_scanner['beacons'], u_scanner['rotations'])
+            located_scanner['beacons'], u_scanner['rotations'])
         if len(offset_beacons) > 0:
             print(
                 f'      Found overlap with scanner {u_scanner["id"]}')
@@ -110,23 +110,23 @@ def search_overlap(done_scanner: Scanner, unknown_scanners: ScannerList) -> Scan
 
 scanners = setup_scanners()
 beacons = set(scanners[0]['beacons'])
-done_scanners: ScannerList = queue.Queue()
-done_scanners.put(scanners[0])
-seen_scanners = []
+located_scanners: ScannerList = queue.Queue()
+located_scanners.put(scanners[0])
+seen_scanners: str = []
 
-while not done_scanners.empty():
-    resolved_scanner: Scanner = done_scanners.get()
-    seen_scanners.append(resolved_scanner['id'])
-    print(f'Searching for overlaps with scanner {resolved_scanner["id"]}...')
-    overlapping_scanners = search_overlap(resolved_scanner, scanners)
+while not located_scanners.empty():
+    located_scanner: Scanner = located_scanners.get()
+    seen_scanners.append(located_scanner['id'])
+
+    print(f'Searching for overlaps with scanner {located_scanner["id"]}...')
+    overlapping_scanners = search_overlap(located_scanner, scanners)
 
     if len(overlapping_scanners) == 0:
-        print(f'WARN: No overlaps found for scanner {resolved_scanner["id"]}!')
+        print(f'WARN: No overlaps found for scanner {located_scanner["id"]}!')
     else:
         for o_scanner in overlapping_scanners:
             beacons |= set(o_scanner['beacons'])
             if o_scanner['id'] not in seen_scanners:
-                done_scanners.put(o_scanner)
-                seen_scanners.append(o_scanner['id'])
+                located_scanners.put(o_scanner)
 
 print(len(beacons))
