@@ -27,6 +27,10 @@ with open('18/input_test.txt') as f:
         nums.append(split_list)
 
 
+def format(num: SnailfishNumber) -> str:
+    return "".join([str(c) for c in num])
+
+
 def add(a: SnailfishNumber, b: SnailfishNumber) -> SnailfishNumber:
     a.append(',')
     merged = a + b
@@ -65,7 +69,7 @@ def split(char: int, new_num: SnailfishNumber):
     new_num += ['[', new_left, ',', new_right, ']']
 
 
-def reduce(num: SnailfishNumber) -> SnailfishNumber:
+def reduce_explode(num: SnailfishNumber) -> SnailfishNumber:
     OPEN = '['
     CLOSE = ']'
 
@@ -77,10 +81,14 @@ def reduce(num: SnailfishNumber) -> SnailfishNumber:
         if isinstance(char, int):
             if depth > 4:
                 explode((num, i), (new_num, recent_int_index))
-                return new_num + num[i+4:]
-            elif char >= 10:
-                split(char, new_num)
-                return new_num + num[i+1:]
+                reduced_num = new_num + num[i+4:]
+                print(f'Exploded: {format(reduced_num)}')
+                return reduced_num
+            # elif char >= 10:
+            #     split(char, new_num)
+            #     reduced_num = new_num + num[i+1:]
+            #     print(f'Split: {format(reduced_num)}')
+            #     return reduced_num
             else:
                 recent_int_index = len(new_num)
         elif char == OPEN:
@@ -91,13 +99,48 @@ def reduce(num: SnailfishNumber) -> SnailfishNumber:
     return []
 
 
+def reduce_split(num: SnailfishNumber) -> SnailfishNumber:
+    OPEN = '['
+    CLOSE = ']'
+
+    depth: int = 0
+    recent_int_index: Union[int, None] = None
+    new_num: SnailfishNumber = []
+
+    for i, char in enumerate(num):
+        if isinstance(char, int):
+            # if depth > 4:
+            #     explode((num, i), (new_num, recent_int_index))
+            #     reduced_num = new_num + num[i+4:]
+            #     print(f'Exploded: {format(reduced_num)}')
+            #     return reduced_num
+            if char >= 10:
+                split(char, new_num)
+                reduced_num = new_num + num[i+1:]
+                print(f'Split: {format(reduced_num)}')
+                return reduced_num
+            # else:
+            #     recent_int_index = len(new_num)
+        elif char == OPEN:
+            depth += 1
+        elif char == CLOSE:
+            depth -= 1
+        new_num.append(char)
+    return []
+
+
+res: SnailfishNumber = []
 prev_nums: List[SnailfishNumber] = []
 for n in nums:
     if prev_nums:
         res = add(prev_nums.pop(), n)
 
+        # FIXME: Consolidate reducers into one function
         while True:
-            reduced = reduce(res)
+            reduced = reduce_explode(res)
+
+            if not reduced:
+                reduced = reduce_split(res)
 
             if not reduced:
                 break
@@ -108,4 +151,17 @@ for n in nums:
     else:
         prev_nums.append(n)
 
-print("".join([str(c) for c in res]))
+# TEST ALGO
+# res = nums[0]
+# print(f'Reducing: {format(nums[0])}')
+# while True:
+
+#     reduced = reduce_explode(res)
+
+#     if not reduced:
+#         reduced = reduce_split(res)
+
+#     if not reduced:
+#         break
+
+#     res = reduced
