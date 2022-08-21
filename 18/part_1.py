@@ -1,3 +1,4 @@
+import math
 from typing import List, Tuple, Union, Literal
 
 
@@ -34,7 +35,7 @@ def add(a: SnailfishNumber, b: SnailfishNumber) -> SnailfishNumber:
     return merged
 
 
-def explode(num_and_index: Tuple[SnailfishNumber, int], new_num_and_index: Tuple[SnailfishNumber, int]) -> SnailfishNumber:
+def explode(num_and_index: Tuple[SnailfishNumber, int], new_num_and_index: Tuple[SnailfishNumber, int]):
     num, curr_index = num_and_index
     new_num, recent_int_index = new_num_and_index
 
@@ -58,6 +59,12 @@ def explode(num_and_index: Tuple[SnailfishNumber, int], new_num_and_index: Tuple
     new_num[-1] = 0
 
 
+def split(char: int, new_num: SnailfishNumber):
+    new_left = math.floor(char / 2)
+    new_right = math.ceil(char / 2)
+    new_num += ['[', new_left, ',', new_right, ']']
+
+
 def reduce(num: SnailfishNumber) -> SnailfishNumber:
     OPEN = '['
     CLOSE = ']'
@@ -72,8 +79,8 @@ def reduce(num: SnailfishNumber) -> SnailfishNumber:
                 explode((num, i), (new_num, recent_int_index))
                 return new_num + num[i+4:]
             elif char >= 10:
-                raise Exception(
-                    f'time to split on char: {num[i]}, pos: {i}', f'state: {"".join([str(c) for c in num])}')
+                split(char, new_num)
+                return new_num + num[i+1:]
             else:
                 recent_int_index = len(new_num)
         elif char == OPEN:
@@ -81,6 +88,7 @@ def reduce(num: SnailfishNumber) -> SnailfishNumber:
         elif char == CLOSE:
             depth -= 1
         new_num.append(char)
+    return []
 
 
 prev_nums: List[SnailfishNumber] = []
@@ -91,7 +99,7 @@ for n in nums:
         while True:
             reduced = reduce(res)
 
-            if reduced == res:
+            if not reduced:
                 break
 
             res = reduced
@@ -99,3 +107,5 @@ for n in nums:
         prev_nums.append(res)
     else:
         prev_nums.append(n)
+
+print("".join([str(c) for c in res]))
