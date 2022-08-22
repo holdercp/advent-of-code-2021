@@ -1,3 +1,4 @@
+from copy import deepcopy
 import math
 from typing import List, Tuple, Union, Literal
 
@@ -69,63 +70,46 @@ def split(char: int, new_num: SnailfishNumber):
     new_num += ['[', new_left, ',', new_right, ']']
 
 
-def reduce_explode(num: SnailfishNumber) -> SnailfishNumber:
+def reduce(num: SnailfishNumber) -> SnailfishNumber:
     OPEN = '['
     CLOSE = ']'
 
     depth: int = 0
     recent_int_index: Union[int, None] = None
     new_num: SnailfishNumber = []
+    split_state = None
 
     for i, char in enumerate(num):
         if isinstance(char, int):
+            # Explode
             if depth > 4:
                 explode((num, i), (new_num, recent_int_index))
                 reduced_num = new_num + num[i+4:]
                 print(f'Exploded: {format(reduced_num)}')
                 return reduced_num
-            # elif char >= 10:
-            #     split(char, new_num)
-            #     reduced_num = new_num + num[i+1:]
-            #     print(f'Split: {format(reduced_num)}')
-            #     return reduced_num
-            else:
-                recent_int_index = len(new_num)
-        elif char == OPEN:
-            depth += 1
-        elif char == CLOSE:
-            depth -= 1
-        new_num.append(char)
-    return []
-
-
-def reduce_split(num: SnailfishNumber) -> SnailfishNumber:
-    OPEN = '['
-    CLOSE = ']'
-
-    depth: int = 0
-    recent_int_index: Union[int, None] = None
-    new_num: SnailfishNumber = []
-
-    for i, char in enumerate(num):
-        if isinstance(char, int):
-            # if depth > 4:
-            #     explode((num, i), (new_num, recent_int_index))
-            #     reduced_num = new_num + num[i+4:]
-            #     print(f'Exploded: {format(reduced_num)}')
-            #     return reduced_num
+            # Splitting is second in priority to explode.
+            # If we encounter a int larger than 9, we save the state to run
+            # after checking for explodes
+            # so we don't have to run through the loop again
             if char >= 10:
-                split(char, new_num)
-                reduced_num = new_num + num[i+1:]
-                print(f'Split: {format(reduced_num)}')
-                return reduced_num
-            # else:
-            #     recent_int_index = len(new_num)
+                if not split_state:
+                    split_state = {'char': char,
+                                   'new_num': deepcopy(new_num), 'index': i}
+
+            recent_int_index = len(new_num)
         elif char == OPEN:
             depth += 1
         elif char == CLOSE:
             depth -= 1
         new_num.append(char)
+
+    # Split if we found a splitable condition when checking for explodes
+    if split_state:
+        split(split_state['char'], split_state['new_num'])
+        reduced_num = split_state['new_num'] + num[split_state['index']+1:]
+        print(f'Split: {format(reduced_num)}')
+        return reduced_num
+
     return []
 
 
@@ -135,12 +119,8 @@ for n in nums:
     if prev_nums:
         res = add(prev_nums.pop(), n)
 
-        # FIXME: Consolidate reducers into one function
         while True:
-            reduced = reduce_explode(res)
-
-            if not reduced:
-                reduced = reduce_split(res)
+            reduced = reduce(res)
 
             if not reduced:
                 break
@@ -156,10 +136,7 @@ for n in nums:
 # print(f'Reducing: {format(nums[0])}')
 # while True:
 
-#     reduced = reduce_explode(res)
-
-#     if not reduced:
-#         reduced = reduce_split(res)
+#     reduced = reduce(res)
 
 #     if not reduced:
 #         break
