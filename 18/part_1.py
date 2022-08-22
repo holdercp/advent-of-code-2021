@@ -1,5 +1,6 @@
+from ast import literal_eval
 from copy import deepcopy
-import math
+from math import floor, ceil
 from typing import List, Tuple, Union, Literal
 
 
@@ -7,7 +8,7 @@ SnailfishNumberPrimitive = Union[Literal['[', ']', ','], int]
 SnailfishNumber = List[SnailfishNumberPrimitive]
 
 nums: SnailfishNumber = []
-with open('18/input_test.txt') as f:
+with open('18/input.txt') as f:
     nums_raw = f.read().strip().split('\n')
     for nr in nums_raw:
         split_list = []
@@ -65,8 +66,8 @@ def explode(num_and_index: Tuple[SnailfishNumber, int], new_num_and_index: Tuple
 
 
 def split(char: int, new_num: SnailfishNumber):
-    new_left = math.floor(char / 2)
-    new_right = math.ceil(char / 2)
+    new_left = floor(char / 2)
+    new_right = ceil(char / 2)
     new_num += ['[', new_left, ',', new_right, ']']
 
 
@@ -113,6 +114,17 @@ def reduce(num: SnailfishNumber) -> SnailfishNumber:
     return []
 
 
+def convert(num: SnailfishNumber) -> List[List[int]]:
+    return literal_eval(format(num))
+
+
+def calc_magnitude(num: Union[List[int], int]) -> int:
+    if isinstance(num, int):
+        return num
+
+    return 3*calc_magnitude(num[0]) + 2*calc_magnitude(num[1])
+
+
 res: SnailfishNumber = []
 prev_nums: List[SnailfishNumber] = []
 for n in nums:
@@ -131,14 +143,4 @@ for n in nums:
     else:
         prev_nums.append(n)
 
-# TEST ALGO
-# res = nums[0]
-# print(f'Reducing: {format(nums[0])}')
-# while True:
-
-#     reduced = reduce(res)
-
-#     if not reduced:
-#         break
-
-#     res = reduced
+print(calc_magnitude(convert(res)))
