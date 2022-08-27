@@ -1,9 +1,25 @@
+hex_to_bin_map = {
+    '0': '0000',
+    '1': '0001',
+    '2': '0010',
+    '3': '0011',
+    '4': '0100',
+    '5': '0101',
+    '6': '0110',
+    '7': '0111',
+    '8': '1000',
+    '9': '1001',
+    'A': '1010',
+    'B': '1011',
+    'C': '1100',
+    'D': '1101',
+    'E': '1110',
+    'F': '1111'
+}
+
 with open('16/input.txt') as f:
     transmission = f.read().strip()
-    # https://stackoverflow.com/a/58290165
-    bin_str = bin(int(transmission, 16))[2:]
-    padding = (4-len(bin_str) % 4) % 4
-    packet = '0'*padding+bin_str
+    packet = ''.join([hex_to_bin_map[c] for c in transmission])
 
 
 def split_packet(packet):
@@ -20,15 +36,25 @@ def parse_header(header):
 
 
 def get_literal_value(literal_value):
-    bin_str = ''
-    step = 5
+    value = ''
+    group_start = 0
+    group_end = 5
     bits_parsed = 0
-    for i in range(0, len(literal_value), step):
-        bin_str += literal_value[i+1:i+step]
-        if literal_value[i] == '0':
-            bits_parsed = i+step
-            break
-    return (int(bin_str, 2), bits_parsed)
+
+    parsed = False
+    while not parsed:
+        group = literal_value[group_start+1:group_end]
+        group_prefix = literal_value[group_start]
+
+        value += group
+        group_start += 5
+        group_end += 5
+        bits_parsed += 5
+
+        if group_prefix == '0':
+            parsed = True
+
+    return (int(value, 2), bits_parsed)
 
 
 def parse_body(body):
@@ -44,14 +70,14 @@ def parse_body(body):
     return (length_type_id, length, subpacket)
 
 
-literal_value_type = 4
+LITERAL_VALUE_TYPE = 4
 
 
 def parse_packet(packet):
     header, body = split_packet(packet)
     version, type_id = parse_header(header)
 
-    if type_id == literal_value_type:
+    if type_id == LITERAL_VALUE_TYPE:
         value, bits_parsed = get_literal_value(body)
         packet_size = bits_parsed + len(header)
 
