@@ -1,4 +1,3 @@
-packet_bin = ''
 with open('16/input.txt') as f:
     transmission = f.read().strip()
     # https://stackoverflow.com/a/58290165
@@ -35,59 +34,56 @@ def get_literal_value(literal_value):
 def parse_body(body):
     length_type_id = body[0]
     length = 0
-    subpackets = 0
+    subpacket = ''
     if length_type_id == '0':
         length = int(body[1:16], 2)
-        subpackets = body[16:]
+        subpacket = body[16:16+length]
     else:
         length = int(body[1:12], 2)
-        subpackets = body[12:]
-    return (length_type_id, length, subpackets)
-
-
-def get_padding(packet_size):
-    remainder = packet_size % 4
-    return 4 - remainder
+        subpacket = body[12:]
+    return (length_type_id, length, subpacket)
 
 
 literal_value_type = 4
 
 
-def parse_packets(packets):
-    header, body = split_packet(packets)
+def parse_packet(packet):
+    header, body = split_packet(packet)
     version, type_id = parse_header(header)
 
     if type_id == literal_value_type:
         value, bits_parsed = get_literal_value(body)
         packet_size = bits_parsed + len(header)
-        padding = get_padding(packet_size)
 
-        return (version, value, packet_size + padding)
+        return (version, packet_size)
     else:
-        length_type, num, subpackets = parse_body(body)
+        length_type, num, subpacket = parse_body(body)
         if length_type == '0':
-            bits_parsed = 0
-            while bits_parsed < num:
-                s_version, s_value, s_bits_parsed = parse_packets(subpackets)
+            while len(subpacket):
+                s_version, s_bits_parsed = parse_packet(subpacket)
                 version += s_version
-                bits_parsed += s_bits_parsed
-                subpackets = subpackets[bits_parsed:]
-            return (version, 0, bits_parsed)
+                subpacket = subpacket[s_bits_parsed:]
+                packet_size = num + 15 + len(header) + 1
+            return (version, packet_size)
         else:
-            bits_parsed = 0
+            packet_size = 11 + len(header) + 1
             for i in range(num):
-                s_version, s_value, s_bits_parsed = parse_packets(subpackets)
-                bits_parsed += s_bits_parsed
-                subpackets = subpackets[s_bits_parsed:]
+                s_version, s_bits_parsed = parse_packet(subpacket)
                 version += s_version
-            return (version, 0, bits_parsed)
+                subpacket = subpacket[s_bits_parsed:]
+                packet_size += s_bits_parsed
+            return (version, packet_size)
 
 
 version_sum = 0
-while len(packet) > 0:
-    version, value, bits_parsed = parse_packets(packet)
+parsed = False
+while not parsed:
+    version, bits_parsed = parse_packet(packet)
     version_sum += version
     packet = packet[bits_parsed:]
+
+    if '1' not in packet:
+        parsed = True
 
 
 print(version_sum)
